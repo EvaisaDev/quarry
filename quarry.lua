@@ -52,34 +52,28 @@ function out(s)
 end
 
 function dropInChest()
-	turtle.turnLeft()
-	
-	local success, data = turtle.inspect()
-	
-	if success then
-		if data.name == "minecraft:chest" then
-		
+	local turns = 0
+	while turns < 4 do
+		local success, data = turtle.inspect()
+		if success and data.name == "minecraft:chest" then
 			out("Dropping items in chest")
-			
-			for i=1, 16 do
+			for i=1,16 do
 				turtle.select(i)
-				
-				data = turtle.getItemDetail()
-				
-				if data ~= nil and
-						data.name ~= "minecraft:charcoal" and
-						(data.name == "minecraft:coal" and CHARCOALONLY == false) == false and
-						(data.damage == nil or data.name .. data.damage ~= "minecraft:coal1") then
-
+				local d = turtle.getItemDetail()
+				if d ~= nil and d.name ~= "minecraft:charcoal" and (d.name == "minecraft:coal" and CHARCOALONLY == false) == false and (d.damage == nil or d.name..d.damage ~= "minecraft:coal1") then
 					turtle.drop()
 				end
 			end
+			for i=1,turns do
+				turtle.turnRight()
+			end
+			return
 		end
+		turtle.turnLeft()
+		turns = turns + 1
 	end
-	
-	turtle.turnRight()
-	
 end
+   
 
 function goDown()
 	while true do
@@ -311,6 +305,8 @@ if USEMODEM then
 end
 
 out("\n\n\n-- WELCOME TO THE MINING TURTLE --\n\n")
+
+dropInChest()
 
 while true do
 
