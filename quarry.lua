@@ -20,8 +20,12 @@ local CHARCOALONLY = false
 local USEMODEM = false
 
 local FUEL_SOURCES = {
- ["minecraft:charcoal"] = true,
- ["minecraft:coal"] = true
+	["minecraft:charcoal"] = true,
+	["minecraft:coal"] = true,
+	["modern_industrialization:lignite_coal"] = true,
+	["minecraft:coal_block"] = true,
+	["minecraft:charcoal_block"] = true,
+	["modern_industrialization:lignite_coal_block"] = true
 }
 
 function isFuelItem(item)
