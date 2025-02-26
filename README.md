@@ -6,7 +6,7 @@ This script aims to the most reliable and self-sufficient way for a mining turtl
 # Usage
 Easiest way I know of installing quarry in your turtle, is to download the setup script from pastebin:
 
-`pastebin get LcrmJKAn setup`
+`pastebin get zgZFgABh setup`
 
 and then run it, it will download the scripts from this repository.
 Then just run `quarry`, there are a few flags you can specify:
