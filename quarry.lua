@@ -14,6 +14,7 @@ local OUTOFFUEL = 3
 local FULLINV = 4
 local BLOCKEDMOV = 5
 local USRINTERRUPT = 6
+local OUTOFCHUNK = 7
 
 local CHARCOALONLY = false
 local USEMODEM = false
@@ -100,15 +101,15 @@ function goDown()
         end
         if not turtle.down() then
             turtle.up()
-            z = z + 1
+            y = y + 1
             return
         end
-        z = z - 1
+        y = y - 1
     end
 end
 
 function fuelNeededToGoBack()
-    return -z + x + y + 2
+    return -y + x + z + 2
 end
 
 function refuel()
@@ -120,6 +121,26 @@ function refuel()
         end
     end
     return false
+end
+
+
+function getGPSPos()
+	local x, y, z = gps.locate()
+	if x == nil then
+		return nil
+	end
+	return {x = x, y = y, z = z}
+end
+
+function getChunkOrigin()
+	local pos = getGPSPos()
+	if pos == nil then
+		return nil
+	end
+	local x = math.floor(pos.x / 16) * 16
+	local y = math.floor(pos.y / 16) * 16
+	local z = math.floor(pos.z / 16) * 16
+	return {x = x, y = y, z = z}
 end
 
 function moveH()
@@ -135,13 +156,29 @@ function moveH()
             return FULLINV
         end
     end
+
+	-- if outside of chunk boundaries, error
+	local gpsPos = getGPSPos()
+	if gpsPos == nil then
+		return ERROR
+	end
+	local chunkOrigin = getChunkOrigin()
+	if chunkOrigin == nil then
+		return ERROR
+	end
+	if gpsPos.x < chunkOrigin.x or gpsPos.x >= chunkOrigin.x + 16 or
+		gpsPos.z < chunkOrigin.z or gpsPos.z >= chunkOrigin.z + 16 then
+		return OUTOFCHUNK
+	end
+	
+
     if turtle.getFuelLevel() <= fuelNeededToGoBack() then
         if not refuel() then
             out("Out of fuel!")
             return OUTOFFUEL
         end
     end
-    if facingfw and y < max - 1 then
+    if facingfw and z < max - 1 then
         local dugFw = t.dig()
         if dugFw == false then
             out("Hit bedrock, can't keep going")
@@ -152,15 +189,15 @@ function moveH()
         if t.fw() == false then
             return BLOCKEDMOV
         end
-        y = y + 1
-    elseif not facingfw and y > 0 then
+        z = z + 1
+    elseif not facingfw and z > 0 then
         t.dig()
         t.digUp()
         t.digDown()
         if t.fw() == false then
             return BLOCKEDMOV
         end
-        y = y - 1
+        z = z - 1
     else
         if x + 1 >= max then
             t.digUp()
@@ -211,28 +248,20 @@ function goToOrigin()
         turtle.turnLeft()
         t.fw(x)
         turtle.turnLeft()
-        t.fw(y)
+        t.fw(z)
         turtle.turnRight()
         turtle.turnRight()
     else
         turtle.turnRight()
         t.fw(x)
         turtle.turnLeft()
-        t.fw(y)
+        t.fw(z)
         turtle.turnRight()
         turtle.turnRight()
     end
     x = 0
-    y = 0
+    z = 0
     facingfw = true
-end
-
-function getGPSPos()
-	local x, y, z = gps.locate()
-	if x == nil then
-		return nil
-	end
-	return {x = x, y = y, z = z}
 end
 
 
@@ -271,9 +300,9 @@ function getChunkCorner()
 end
 
 function goUp()
-    while z < 0 do
+    while y < 0 do
         t.up()
-        z = z + 1
+        y = y + 1
     end
     goToOrigin()
 end
@@ -293,9 +322,11 @@ function mainloop()
                 goUp()
                 return BLOCKEDMOV
             end
-            z = z - 1
-            out("Z: " .. z)
+            y = y - 1
+            out("Y: " .. y)
         end
+
+		
     end
 end
 
@@ -314,15 +345,15 @@ while true do
 	-- dig down 2 blocks
 	t.digDown()
 	t.down()
-	z = z - 1
+	y = y - 1
 	t.digDown()
 	t.down()
-	z = z - 1
+	y = y - 1
 	
 	-- move to chunk corner and start mining
 	t.fw(corner.x - x)
 	t.turnRight()
-	t.fw(corner.y - y)
+	t.fw(corner.z - z)
 	t.turnLeft()
 
     local errorcode = mainloop()
