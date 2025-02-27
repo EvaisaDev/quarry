@@ -22,7 +22,7 @@ local BLOCKEDMOV = 5
 local USRINTERRUPT = 6
 
 local CHARCOALONLY = false
-local USEMODEM = true
+local USEMODEM = false
 
 -----------------------------------
 -- Fuel items recognized:        --
@@ -64,6 +64,8 @@ for i=1,#tArgs do
       local ch = string.sub(arg,c,c)
       if ch == 'c' then
         CHARCOALONLY = true
+      elseif ch == 'm' then
+        USEMODEM = true
       else
         write("Invalid flag '")
         write(ch)
@@ -137,6 +139,7 @@ end
 
 ----------------------------------------------------
 -- Modified goDown():
+-- Digs down if blocked, tries again.
 -- Goes down EXACTLY 2 blocks, then stops.
 ----------------------------------------------------
 function goDown()
@@ -147,9 +150,12 @@ function goDown()
         return OUTOFFUEL
       end
     end
+    
+    -- Always dig first in case there's a block below
+    t.digDown()
     local success = turtle.down()
     if not success then
-      out("Blocked from going down. (Chest or block in the way?)")
+      out("Still blocked from going down after digging. Possibly bedrock/chest/unbreakable.")
       return BLOCKEDMOV
     end
     z = z - 1
@@ -251,8 +257,8 @@ end
 function digLayer()
   local errorcode = OK
   while errorcode == OK do
+    -- If using modem, check for "return" signal
     if USEMODEM then
-      -- Check if user typed "return" or some signal over modem
       local msg = rednet.receive(1)
       if msg ~= nil and string.find(msg, "return") ~= nil then
         return USRINTERRUPT
@@ -325,6 +331,7 @@ function mainloop()
       t.digDown()
       local success = t.down()
       if not success then
+        out("Blocked going down mid-mining (possibly bedrock).")
         goUp()
         return BLOCKEDMOV
       end
@@ -362,13 +369,10 @@ do
   local chunkZMin = chunkZ * 16
   local chunkZMax = chunkZMin + 15
 
-  -- How far until the chunk boundary in X or Z direction from our current location?
-  -- We'll do a naive approach: we won't exceed the minimum leftover in either dimension.
-  --
-  -- Note: The script uses 'x' to track left-right movement and 'y' to track forward-back
-  -- in a "snake." We don't truly know how that correlates to world X or Z. For a simple
-  -- solution, we just pick the smallest leftover across X or Z, so we never cross the chunk.
-  --
+  -- Calculate how far we can go before hitting chunk boundary.
+  -- Because the turtle code uses 'x' for left-right and 'y' for forward-back,
+  -- we do a naive approach: figure leftover in real X and leftover in real Z,
+  -- then pick whichever is smaller for 'max'.
   local leftoverX = (gpsx >= 0)
                       and (chunkXMax - gpsx + 1)
                       or  (gpsx - chunkXMin + 1)
@@ -376,13 +380,11 @@ do
                       and (chunkZMax - gpsz + 1)
                       or  (gpsz - chunkZMin + 1)
 
-  -- Force them to be at least 1..16
   if leftoverX < 1 then leftoverX = 1 end
   if leftoverZ < 1 then leftoverZ = 1 end
   if leftoverX > 16 then leftoverX = 16 end
   if leftoverZ > 16 then leftoverZ = 16 end
 
-  -- We'll reduce the snake dimension to the min leftover so we won't exceed chunk boundaries
   max = math.min(leftoverX, leftoverZ, 16)
 
   print(("GPS location: (%.2f, %.2f, %.2f) => chunk=(%d,%d)."):format(gpsx,gpsy,gpsz,chunkX,chunkZ))
@@ -402,7 +404,7 @@ dropInChest()
 while true do
   local downResult = goDown()
   if downResult ~= OK then
-    -- Could not go down even 2 blocks => likely blocked by chest or out of fuel
+    -- Could not go down even 2 blocks => likely blocked by bedrock/chest or out of fuel
     break
   end
 
