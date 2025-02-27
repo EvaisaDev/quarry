@@ -352,9 +352,9 @@ while true do
 	
 	-- move to chunk corner and start mining
 	t.fw(corner.x - x)
-	t.turnRight()
+	turtle.turnRight()
 	t.fw(corner.z - z)
-	t.turnLeft()
+	turtle.turnLeft()
 
     local errorcode = mainloop()
     dropInChest()
