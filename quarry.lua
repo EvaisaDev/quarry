@@ -283,13 +283,15 @@ function getFacingDirection()
 	return {x = pos2.x - pos1.x, y = pos2.y - pos1.y, z = pos2.z - pos1.z}
 end
 
+local originalFacing = getFacingDirection()
+
 -- get bottom left corner of chunk from perspective of turtle by using facing direction and position
 function getChunkCorner()
 	local pos = getGPSPos()
 	if pos == nil then
 		return nil
 	end
-	local dir = getFacingDirection()
+	local dir = originalFacing
 	if dir == nil then
 		return nil
 	end
@@ -339,29 +341,39 @@ dropInChest()
 
 local corner = getChunkCorner()
 
-while true do
+out("Chunk corner: [" .. corner.x .. ", " .. corner.y .. ", " .. corner.z .. "]")
+
+
+-- dig down 2 blocks
+t.digDown()
+t.down()
+y = y - 1
+t.digDown()
+t.down()
+y = y - 1
+
+local gpsPos = getGPSPos()
+if gpsPos == nil then
+	out("Can't get GPS position")
+	return ERROR
+end
+
+-- move to chunk corner and start mining
+t.fw(corner.x - gpsPos.x)
+turtle.turnRight()
+t.fw(corner.z - gpsPos.z)
+turtle.turnLeft()
+
+--[[while true do
     goDown()
 
-	-- dig down 2 blocks
-	t.digDown()
-	t.down()
-	y = y - 1
-	t.digDown()
-	t.down()
-	y = y - 1
-	
-	-- move to chunk corner and start mining
-	t.fw(corner.x - x)
-	turtle.turnRight()
-	t.fw(corner.z - z)
-	turtle.turnLeft()
 
     local errorcode = mainloop()
     dropInChest()
     if errorcode ~= FULLINV then
         break
     end
-end
+end]]
 
 if USEMODEM then
     rednet.close("right")
