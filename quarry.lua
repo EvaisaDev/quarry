@@ -1,11 +1,20 @@
 os.loadAPI("inv")
 os.loadAPI("t")
 
-local x = 0
-local y = 0
-local z = 0
+function getGPSPos()
+	local x, y, z = gps.locate()
+	if x == nil then
+		return nil
+	end
+	return {x = x, y = y, z = z}
+end
+
+
+local start = getGPSPos()
 local max = 16
 local facingfw = true
+local facing = nil
+local corner = getChunkOrigin()
 
 local OK = 0
 local ERROR = 1
@@ -61,7 +70,8 @@ for i = 1, #tArgs do
 end
 
 function out(s)
-    s2 = s .. " @ [" .. x .. ", " .. y .. ", " .. z .. "]"
+	local pos = getGPSPos()
+    s2 = s .. " @ [" .. pos.x .. ", " .. pos.y .. ", " .. pos.z .. "]"
     print(s2)
     if USEMODEM then
         rednet.broadcast(s2, "miningTurtle")
@@ -101,15 +111,19 @@ function goDown()
         end
         if not turtle.down() then
             turtle.up()
-            y = y + 1
             return
         end
-        y = y - 1
     end
 end
 
 function fuelNeededToGoBack()
-    return -y + x + z + 2
+	local pos = getGPSPos()
+
+	local y = math.abs(pos.y - start.y)
+	local x = math.abs(pos.x - start.x)
+	local z = math.abs(pos.z - start.z)
+
+    return y + x + z + 2
 end
 
 function refuel()
@@ -124,23 +138,14 @@ function refuel()
 end
 
 
-function getGPSPos()
-	local x, y, z = gps.locate()
-	if x == nil then
-		return nil
-	end
-	return {x = x, y = y, z = z}
-end
-
 function getChunkOrigin()
 	local pos = getGPSPos()
 	if pos == nil then
 		return nil
 	end
 	local x = math.floor(pos.x / 16) * 16
-	local y = math.floor(pos.y / 16) * 16
 	local z = math.floor(pos.z / 16) * 16
-	return {x = x, y = y, z = z}
+	return {x = x, z = z}
 end
 
 function moveH()
@@ -178,6 +183,11 @@ function moveH()
             return OUTOFFUEL
         end
     end
+
+	-- calculate x, z, as local coordinates by offsetting from chunk origin
+	local x = gpsPos.x - chunkOrigin.x
+	local z = gpsPos.z - chunkOrigin.z
+
     if facingfw and z < max - 1 then
         local dugFw = t.dig()
         if dugFw == false then
@@ -244,6 +254,16 @@ function digLayer()
 end
 
 function goToOrigin()
+	local gpsPos = getGPSPos()
+	if gpsPos == nil then
+		return
+	end
+	local chunkOrigin = getChunkOrigin()
+	if chunkOrigin == nil then
+		return
+	end
+	local x = gpsPos.x - chunkOrigin.x
+	local z = gpsPos.z - chunkOrigin.z
     if facingfw then
         turtle.turnLeft()
         t.fw(x)
@@ -280,31 +300,16 @@ function getFacingDirection()
 	t.back()
 	
 	-- return direction vector
-	return {x = pos2.x - pos1.x, y = pos2.y - pos1.y, z = pos2.z - pos1.z}
+	return {x = pos2.x - pos1.x, z = pos2.z - pos1.z}
 end
 
-local originalFacing = getFacingDirection()
-
--- get bottom left corner of chunk from perspective of turtle by using facing direction and position
-function getChunkCorner()
-	local pos = getGPSPos()
-	if pos == nil then
-		return nil
-	end
-	local dir = originalFacing
-	if dir == nil then
-		return nil
-	end
-	local x = pos.x - math.abs(dir.x)
-	local y = pos.y - math.abs(dir.y)
-	local z = pos.z - math.abs(dir.z)
-	return {x = x, y = y, z = z}
-end
+facing = getFacingDirection()
 
 function goUp()
-    while y < 0 do
+	local pos = getGPSPos()
+    while pos.y < start.y do
         t.up()
-        y = y + 1
+        pos = getGPSPos()
     end
     goToOrigin()
 end
@@ -324,8 +329,6 @@ function mainloop()
                 goUp()
                 return BLOCKEDMOV
             end
-            y = y - 1
-            out("Y: " .. y)
         end
 
 		
@@ -339,32 +342,10 @@ end
 out("\n\n\n-- WELCOME TO THE MINING TURTLE --\n\n")
 dropInChest()
 
-local corner = getChunkCorner()
-
-out("Chunk corner: [" .. corner.x .. ", " .. corner.y .. ", " .. corner.z .. "]")
+out("Chunk corner: [" .. corner.x .. ", "  .. corner.z .. "]")
 
 
--- dig down 2 blocks
-t.digDown()
-t.down()
-y = y - 1
-t.digDown()
-t.down()
-y = y - 1
-
-local gpsPos = getGPSPos()
-if gpsPos == nil then
-	out("Can't get GPS position")
-	return ERROR
-end
-
--- move to chunk corner and start mining
-t.fw(corner.x - gpsPos.x)
-turtle.turnRight()
-t.fw(corner.z - gpsPos.z)
-turtle.turnLeft()
-
---[[while true do
+while true do
     goDown()
 
 
@@ -373,7 +354,7 @@ turtle.turnLeft()
     if errorcode ~= FULLINV then
         break
     end
-end]]
+end
 
 if USEMODEM then
     rednet.close("right")
