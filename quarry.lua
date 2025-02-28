@@ -144,6 +144,13 @@ function init()
  local x,y,z=gps.locate()
  if not x then return end
  sx,sy,sz=x,y,z
+
+ t.digDown()
+ t.down(1)
+ t.digDown()
+ t.down(1)
+ 
+
  while not turtle.detectDown() do
   if not t.down(1) then return end
  end
@@ -237,12 +244,8 @@ function excavateChunk()
 end
 
 function main()
-	t.digDown()
-	t.down(1)
-	t.digDown()
-	t.down(1)
-	
 	if not initHeading() then return end
+
 	while true do
 		init()
 		excavateChunk()
