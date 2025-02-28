@@ -168,3 +168,36 @@ function back(l)
 		end
 	end
 end
+
+local FUEL_SOURCES={
+	["minecraft:charcoal"]=true,
+	["minecraft:coal"]=true,
+	["modern_industrialization:lignite_coal"]=true,
+	["minecraft:coal_block"]=true,
+	["minecraft:charcoal_block"]=true,
+	["modern_industrialization:lignite_coal_block"]=true
+  }
+  
+function isFuelItem(item)
+	if not item then
+	  return false
+	end
+	if not FUEL_SOURCES[item.name] then
+	  return false
+	end
+	if CHARCOALONLY and item.name=="minecraft:coal" and item.damage==0 then
+	  return false
+	end
+	return true
+end
+  
+function refuel()
+	for i=1,16 do
+	  turtle.select(i)
+	  local item=turtle.getItemDetail()
+	  if isFuelItem(item) and turtle.refuel(1) then
+		return true
+	  end
+	end
+	return false
+end
